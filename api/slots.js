@@ -48,7 +48,7 @@ export default async function handler(req, res) {
     if (!calRes.ok) {
       const errBody = await calRes.text();
       console.error("Cal.com slots error:", calRes.status, errBody);
-      return res.status(calRes.status).json({ error: "Failed to fetch slots from Cal.com" });
+      return res.status(calRes.status).json({ error: "Failed to fetch slots from Cal.com", detail: errBody, status: calRes.status });
     }
 
     const data = await calRes.json();
