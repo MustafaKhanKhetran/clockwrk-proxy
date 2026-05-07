@@ -30,7 +30,7 @@ export default async function handler(req, res) {
   const startISO   = startDate.toISOString().split("T")[0]; // "2026-05-01"
   const endISO     = endDate.toISOString().split("T")[0];   // "2026-05-31"
 
-  const url = new URL(`${CAL_API_BASE}/slots/available`);
+  const url = new URL(`${CAL_API_BASE}/slots`);
   url.searchParams.set("eventTypeId", EVENT_TYPE_ID);
   url.searchParams.set("startTime",   `${startISO}T00:00:00.000Z`);
   url.searchParams.set("endTime",     `${endISO}T23:59:59.999Z`);
