@@ -1,9 +1,11 @@
 // api/book.js
 // POST /api/book
+// Creates a booking on Cal.com via slug + username (no hardcoded ID needed)
 
-const CAL_API_KEY   = process.env.CAL_API_KEY;
-const EVENT_TYPE_ID = 79775;
-const CAL_API_BASE  = "https://api.cal.com/v2";
+const CAL_API_KEY     = process.env.CAL_API_KEY;
+const CAL_USERNAME    = "mustafa-khan-khetran";
+const EVENT_TYPE_SLUG = "let-s-schedule-a-call";
+const CAL_API_BASE    = "https://api.cal.com/v2";
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", process.env.ALLOWED_ORIGIN || "*");
@@ -15,19 +17,20 @@ export default async function handler(req, res) {
 
   const { name, email, notes, startISO, timeZone = "Asia/Karachi" } = req.body;
 
+  // Basic validation
   if (!name || !email || !startISO) {
     return res.status(400).json({ error: "name, email and startISO are required" });
   }
-
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return res.status(400).json({ error: "Invalid email address" });
   }
 
-  // Correct payload shape per Cal.com docs (2026-02-25)
+  // Booking payload per Cal.com docs (cal-api-version 2024-08-13)
+  // Using eventTypeSlug + username — no hardcoded ID needed
   const payload = {
-    eventTypeId: EVENT_TYPE_ID,
-    start:       startISO,
+    eventTypeSlug: EVENT_TYPE_SLUG,
+    username:      CAL_USERNAME,
+    start:         startISO,          // UTC ISO string e.g. "2026-05-12T09:00:00Z"
     attendee: {
       name,
       email,
@@ -44,7 +47,7 @@ export default async function handler(req, res) {
       method:  "POST",
       headers: {
         "Authorization":   `Bearer ${CAL_API_KEY}`,
-        "cal-api-version": "2026-02-25",
+        "cal-api-version": "2024-08-13",
         "Content-Type":    "application/json",
       },
       body: JSON.stringify(payload),
@@ -53,9 +56,9 @@ export default async function handler(req, res) {
     const data = await calRes.json();
 
     if (!calRes.ok) {
-      console.error("Cal.com booking error:", calRes.status, data);
+      console.error("Cal.com booking error:", calRes.status, JSON.stringify(data));
       return res.status(calRes.status).json({
-        error: data?.message || data?.error?.message || "Failed to create booking",
+        error:  data?.message || data?.error?.message || "Failed to create booking",
         detail: data,
       });
     }

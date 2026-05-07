@@ -1,9 +1,10 @@
 // api/slots.js
 // GET /api/slots?year=2026&month=5&timeZone=Asia%2FKarachi
 
-const CAL_API_KEY   = process.env.CAL_API_KEY;
-const EVENT_TYPE_ID = 79775;
-const CAL_API_BASE  = "https://api.cal.com/v2";
+const CAL_API_KEY      = process.env.CAL_API_KEY;
+const CAL_USERNAME     = "mustafa-khan-khetran";
+const EVENT_TYPE_SLUG  = "let-s-schedule-a-call";
+const CAL_API_BASE     = "https://api.cal.com/v2";
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", process.env.ALLOWED_ORIGIN || "*");
@@ -25,11 +26,13 @@ export default async function handler(req, res) {
   const start   = `${y}-${String(m).padStart(2,"0")}-01`;
   const end     = `${y}-${String(m).padStart(2,"0")}-${String(lastDay).padStart(2,"0")}`;
 
+  // Use eventTypeSlug + username — more reliable than ID for personal accounts
   const url = new URL(`${CAL_API_BASE}/slots`);
-  url.searchParams.set("eventTypeId", EVENT_TYPE_ID);
-  url.searchParams.set("start",       start);
-  url.searchParams.set("end",         end);
-  url.searchParams.set("timeZone",    timeZone);
+  url.searchParams.set("eventTypeSlug", EVENT_TYPE_SLUG);
+  url.searchParams.set("username",      CAL_USERNAME);
+  url.searchParams.set("start",         start);
+  url.searchParams.set("end",           end);
+  url.searchParams.set("timeZone",      timeZone);
 
   try {
     const calRes = await fetch(url.toString(), {
@@ -39,22 +42,26 @@ export default async function handler(req, res) {
       },
     });
 
-    if (!calRes.ok) {
-      const errBody = await calRes.text();
-      console.error("Cal.com slots error:", calRes.status, errBody);
-      return res.status(calRes.status).json({ error: "Failed to fetch slots", detail: errBody });
-    }
-
     const json = await calRes.json();
 
-    // Response shape per docs:
+    if (!calRes.ok) {
+      console.error("Cal.com slots error:", calRes.status, JSON.stringify(json));
+      return res.status(calRes.status).json({
+        error:  "Failed to fetch slots",
+        detail: json,
+      });
+    }
+
+    // Response per docs:
     // { status: "success", data: { "2026-05-12": [{ start: "2026-05-12T09:00:00+05:00" }, ...] } }
     const raw        = json?.data ?? {};
     const normalised = {};
 
     Object.entries(raw).forEach(([dateKey, slotArr]) => {
+      if (!Array.isArray(slotArr) || slotArr.length === 0) return;
       normalised[dateKey] = slotArr.map(slot => {
-        const d  = new Date(slot.start ?? slot.time);
+        // Each slot is { start: "ISO string" }
+        const d  = new Date(slot.start);
         const hh = d.toLocaleString("en-US", { hour: "2-digit",   hour12: false, timeZone });
         const mm = d.toLocaleString("en-US", { minute: "2-digit",               timeZone });
         return `${String(hh).padStart(2,"0")}:${String(mm).padStart(2,"0")}`;
