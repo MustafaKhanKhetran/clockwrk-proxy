@@ -1,0 +1,10 @@
+{
+  "name": "clockwrk-proxy",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cal.com API proxy for Clockwrk booking page",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  }
+}
