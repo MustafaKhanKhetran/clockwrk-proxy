@@ -1,11 +1,9 @@
 // api/book.js
 // POST /api/book
-// Creates a booking on Cal.com via slug + username (no hardcoded ID needed)
 
-const CAL_API_KEY     = process.env.CAL_API_KEY;
-const CAL_USERNAME    = "mustafa-khan-khetran";
-const EVENT_TYPE_SLUG = "let-s-schedule-a-call";
-const CAL_API_BASE    = "https://api.cal.com/v2";
+const CAL_API_KEY   = process.env.CAL_API_KEY;
+const EVENT_TYPE_ID = 5619368;
+const CAL_API_BASE  = "https://api.cal.com/v2";
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", process.env.ALLOWED_ORIGIN || "*");
@@ -17,7 +15,6 @@ export default async function handler(req, res) {
 
   const { name, email, notes, startISO, timeZone = "Asia/Karachi" } = req.body;
 
-  // Basic validation
   if (!name || !email || !startISO) {
     return res.status(400).json({ error: "name, email and startISO are required" });
   }
@@ -25,12 +22,9 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "Invalid email address" });
   }
 
-  // Booking payload per Cal.com docs (cal-api-version 2024-08-13)
-  // Using eventTypeSlug + username — no hardcoded ID needed
   const payload = {
-    eventTypeSlug: EVENT_TYPE_SLUG,
-    username:      CAL_USERNAME,
-    start:         startISO,          // UTC ISO string e.g. "2026-05-12T09:00:00Z"
+    eventTypeId: EVENT_TYPE_ID,
+    start:       startISO,
     attendee: {
       name,
       email,
