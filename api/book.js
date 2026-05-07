@@ -1,13 +1,11 @@
 // api/book.js
 // POST /api/book
-// Creates a booking on Cal.com with the user's selected slot and details.
 
 const CAL_API_KEY   = process.env.CAL_API_KEY;
 const EVENT_TYPE_ID = 79775;
 const CAL_API_BASE  = "https://api.cal.com/v2";
 
 export default async function handler(req, res) {
-  // ── CORS ───────────────────────────────────────────────────────
   res.setHeader("Access-Control-Allow-Origin", process.env.ALLOWED_ORIGIN || "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -17,7 +15,6 @@ export default async function handler(req, res) {
 
   const { name, email, notes, startISO, timeZone = "Asia/Karachi" } = req.body;
 
-  // Basic validation
   if (!name || !email || !startISO) {
     return res.status(400).json({ error: "name, email and startISO are required" });
   }
@@ -27,18 +24,16 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "Invalid email address" });
   }
 
-  const bookingPayload = {
+  // Correct payload shape per Cal.com docs (2026-02-25)
+  const payload = {
     eventTypeId: EVENT_TYPE_ID,
-    start:       startISO,          // e.g. "2026-05-12T09:00:00.000Z"
-    timeZone,
-    language:    "en",
-    title:       `The Call That Starts It All — Clockwrk \u00d7 ${name}`,
+    start:       startISO,
     attendee: {
       name,
       email,
       timeZone,
+      language: "en",
     },
-    // Notes go into the booking's metadata / description field
     metadata: {
       notes: notes || "",
     },
@@ -49,10 +44,10 @@ export default async function handler(req, res) {
       method:  "POST",
       headers: {
         "Authorization":   `Bearer ${CAL_API_KEY}`,
-        "cal-api-version": "2024-08-13",
+        "cal-api-version": "2026-02-25",
         "Content-Type":    "application/json",
       },
-      body: JSON.stringify(bookingPayload),
+      body: JSON.stringify(payload),
     });
 
     const data = await calRes.json();
@@ -60,14 +55,14 @@ export default async function handler(req, res) {
     if (!calRes.ok) {
       console.error("Cal.com booking error:", calRes.status, data);
       return res.status(calRes.status).json({
-        error: data?.message || "Failed to create booking",
+        error: data?.message || data?.error?.message || "Failed to create booking",
+        detail: data,
       });
     }
 
-    // Return just what the frontend needs
     return res.status(200).json({
       success:   true,
-      bookingId: data?.data?.id ?? data?.id,
+      bookingId: data?.data?.id  ?? data?.id,
       uid:       data?.data?.uid ?? data?.uid,
     });
 
